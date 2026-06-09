@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Headlines & Copy</title>
+<link rel="icon" href="/app/favicon.ico" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#2d1f5e;
+  --blue:#a78bfa;
+  --blue-light:#efeafe;
+  --surface:#f8f7f6;
+  --border:#dedad7;
+  --text:#1e293b;--text-muted:#64748b;--white:#ffffff;
+  --green:#059669;--amber:#d97706;--red:#dc2626;
+  --radius:10px;--radius-lg:16px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);min-height:100vh;line-height:1.6}
+
+.hero{background:var(--navy);padding:48px 24px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 110%,rgba(167,139,250,.25) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#c5b8ff;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:6px 16px;border-radius:99px;margin-bottom:18px}
+.hero h1{font-size:clamp(24px,4vw,42px);color:#fff;line-height:1.15;margin-bottom:10px}
+.hero h1 em{font-style:italic;color:#c5b8ff}
+.hero p{color:rgba(255,255,255,.6);font-size:15px}
+
+.container{max-width:720px;margin:0 auto;padding:32px 20px 60px}
+
+.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
+.obj-btn{padding:12px 10px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;text-align:center;background:var(--white);color:var(--text-muted);transition:all .2s;font-family:'DM Sans',sans-serif;line-height:1.3}
+.obj-btn:hover{border-color:var(--blue);color:var(--blue)}
+.obj-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 12px rgba(45,31,94,.3);font-weight:600}
+
+.section{display:none}
+.section.active{display:block}
+
+.card{background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem;box-shadow:var(--shadow)}
+.card-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem}
+
+.step-badge{display:inline-block;background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:12px;letter-spacing:.04em}
+
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:13px;color:var(--text-muted);margin-bottom:5px;font-weight:500}
+.field input,.field textarea{width:100%;padding:10px 14px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:14px;color:var(--text);background:var(--white);outline:none;font-family:'DM Sans',sans-serif;transition:border-color .2s,box-shadow .2s;resize:vertical}
+.field input:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(167,139,250,.1)}
+.field input::placeholder,.field textarea::placeholder{color:#cbd5e1}
+.field .hint{font-size:11px;color:#94a3b8;margin-top:4px}
+
+.notice{background:#fffbeb;border:0.5px solid #fde68a;border-radius:var(--radius);padding:12px 14px;font-size:12px;color:#92400e;line-height:1.5;margin-bottom:16px}
+
+.btn-gerar{width:100%;padding:13px;background:linear-gradient(135deg,var(--navy) 0%,#4c3999 100%);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.01em;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-gerar:hover{opacity:.9}
+.btn-gerar:disabled{opacity:.5;cursor:not-allowed}
+
+.loading{display:none;text-align:center;padding:32px 0}
+.loading-dots{display:flex;justify-content:center;gap:6px;margin-bottom:12px}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:dot .9s ease-in-out infinite}
+.loading-dots span:nth-child(2){animation-delay:.15s}
+.loading-dots span:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+.loading p{font-size:13px;color:var(--text-muted)}
+
+.results-wrap{display:none;margin-top:8px}
+.result-item{background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem;box-shadow:var(--shadow);position:relative}
+.result-num{display:inline-block;background:linear-gradient(135deg,var(--navy),#4c3999);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:14px;letter-spacing:.04em}
+.result-headline{font-size:18px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:8px}
+.result-sub{font-size:14px;font-weight:500;color:var(--blue);line-height:1.4;margin-bottom:10px}
+.result-copy{font-size:13px;color:var(--text-muted);line-height:1.6;border-top:0.5px solid var(--border);padding-top:10px}
+.btn-copy{position:absolute;top:1.25rem;right:1.25rem;background:var(--blue-light);border:none;color:var(--blue);padding:6px 12px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all .2s}
+.btn-copy:hover{background:var(--blue);color:#fff}
+.btn-copy.copied{background:var(--green);color:#fff}
+
+.results-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+
+.btn-continuar{width:100%;padding:11px;background:var(--blue-light);color:var(--blue);border:0.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.01em;transition:all .2s;margin-top:4px}
+.btn-continuar:hover{background:var(--blue);color:#fff}
+.step2-wrap{display:none}
+
+@media(max-width:480px){.obj-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">Performance Digital</div>
+  <h1>Gerador de <em>Headlines & Copy</em></h1>
+  <p>Gere headlines, subheadlines e copys persuasivas com inteligência artificial</p>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">Qual é o seu objetivo?</div>
+    <div class="obj-grid">
+      <button class="obj-btn" onclick="selectObj(this,'curso')">🎓 Divulgar Curso</button>
+      <button class="obj-btn" onclick="selectObj(this,'servico')">🏢 Divulgar Serviço</button>
+      <button class="obj-btn" onclick="selectObj(this,'produto')">🛒 Divulgar Produto / E-commerce</button>
+      <button class="obj-btn" onclick="selectObj(this,'sensivel')">⚖️ Tema Sensível</button>
+      <button class="obj-btn" onclick="selectObj(this,'titulo')" style="grid-column:1/-1">✍️ Criar Títulos Persuasivos para Posts e Artigos</button>
+    </div>
+  </div>
+
+  <!-- ===== CURSO ===== -->
+  <div class="section" id="sec-curso">
+    <div class="card">
+      <div class="step-badge">Passo 1</div>
+      <div class="field">
+        <label>Nome do curso <span style="color:#94a3b8;font-weight:400">(sem as palavras curso, treinamento ou método)</span></label>
+        <input type="text" id="c-nome" placeholder="Ex: Conversão Extrema">
+      </div>
+      <div class="field">
+        <label>Nicho amplo do seu curso</label>
+        <input type="text" id="c-nicho" placeholder="Ex: marketing digital, inglês, finanças...">
+      </div>
+      <button class="btn-continuar" onclick="continuar('curso')">Continuar →</button>
+    </div>
+    <div class="step2-wrap" id="step2-curso">
+      <div class="card">
+        <div class="step-badge">Passo 2</div>
+        <div class="field">
+          <label>Sub-nicho do curso</label>
+          <input type="text" id="c-subnicho" placeholder="Ex: tráfego pago, inglês para viagens, OAB...">
+        </div>
+        <div class="field">
+          <label>Maior desejo do seu público <span style="color:#94a3b8;font-weight:400">(use verbo no infinitivo)</span></label>
+          <input type="text" id="c-desejo" placeholder="Ex: vender pela internet, aprender inglês...">
+          <div class="hint">Um dos verbos deve terminar com "r". Ex: gerar leads, dirigir bem...</div>
+        </div>
+      </div>
+      <button class="btn-gerar" onclick="gerarComValidacao('curso',['c-subnicho','c-desejo'])">✨ Gerar 5 Resultados</button>
+    </div>
+  </div>
+
+  <!-- ===== SERVIÇO ===== -->
+  <div class="section" id="sec-servico">
+    <div class="card">
+      <div class="step-badge">Passo 1</div>
+      <div class="field">
+        <label>Nome da empresa ou marca</label>
+        <input type="text" id="s-nome" placeholder="Ex: Agência Blueberry, Clínica Bella...">
+      </div>
+      <div class="field">
+        <label>Nicho amplo da sua empresa</label>
+        <input type="text" id="s-nicho" placeholder="Ex: marketing digital, advocacia, fotografia...">
+      </div>
+    </div>
+    <button class="btn-gerar" onclick="gerarComValidacao('servico',['s-nome','s-nicho'])">✨ Gerar 5 Resultados</button>
+  </div>
+
+  <!-- ===== PRODUTO ===== -->
+  <div class="section" id="sec-produto">
+    <div class="card">
+      <div class="step-badge">Passo 1</div>
+      <div class="field">
+        <label>Nome da sua empresa / site / e-commerce</label>
+        <input type="text" id="p-nome" placeholder="Ex: TechLand Celulares, Casa das Jóias...">
+      </div>
+      <div class="field">
+        <label>Nicho amplo</label>
+        <input type="text" id="p-nicho" placeholder="Ex: eletrônicos, moda, cosméticos, jóias...">
+      </div>
+      <button class="btn-continuar" onclick="continuar('produto')">Continuar →</button>
+    </div>
+    <div class="step2-wrap" id="step2-produto">
+      <div class="card">
+        <div class="step-badge">Passo 2</div>
+        <div class="field">
+          <label>Produto que deseja divulgar</label>
+          <input type="text" id="p-produto" placeholder="Ex: perfume LeBleur 200ml, Samsung S20...">
+        </div>
+        <div class="field">
+          <label>Maior desejo do seu público <span style="color:#94a3b8;font-weight:400">(use verbo no infinitivo)</span></label>
+          <input type="text" id="p-desejo" placeholder="Ex: perder peso, viajar mais barato...">
+          <div class="hint">Um dos verbos deve terminar com "r". Ex: dirigir bem ou gerar leads...</div>
+        </div>
+      </div>
+      <button class="btn-gerar" onclick="gerarComValidacao('produto',['p-produto','p-desejo'])">✨ Gerar 5 Resultados</button>
+    </div>
+  </div>
+
+  <!-- ===== SENSÍVEL ===== -->
+  <div class="section" id="sec-sensivel">
+    <div class="card">
+      <div class="step-badge">Passo 1</div>
+      <div class="notice">⚠️ <strong>Aviso:</strong> Devido às variadas regras, leis e políticas de publicidade, não podemos garantir que todas as ideias geradas sejam aprovadas nos anúncios ou estejam em conformidade com as regras do seu nicho. Recomendamos que você adapte os textos gerados quando necessário.</div>
+      <div class="field">
+        <label>Nome da empresa ou marca</label>
+        <input type="text" id="n-nome" placeholder="Ex: Dr. Rogério Sá, Juriss Advocacia...">
+      </div>
+      <div class="field">
+        <label>Nicho amplo</label>
+        <input type="text" id="n-nicho" placeholder="Ex: estética, saúde, cirurgia, advocacia...">
+      </div>
+      <button class="btn-continuar" onclick="continuar('sensivel')">Continuar →</button>
+    </div>
+    <div class="step2-wrap" id="step2-sensivel">
+      <div class="card">
+        <div class="step-badge">Passo 2</div>
+        <div class="field">
+          <label>Sub-nicho do serviço</label>
+          <input type="text" id="n-subnicho" placeholder="Ex: cirurgia plástica, assessoria jurídica...">
+        </div>
+        <div class="field">
+          <label>Maior desejo do seu público <span style="color:#94a3b8;font-weight:400">(use verbo no infinitivo)</span></label>
+          <input type="text" id="n-desejo" placeholder="Ex: perder peso, resolver dívidas...">
+          <div class="hint">Um dos verbos deve terminar com "r". Ex: dirigir bem ou gerar leads...</div>
+        </div>
+      </div>
+      <button class="btn-gerar" onclick="gerarComValidacao('sensivel',['n-subnicho','n-desejo'])">✨ Gerar 5 Resultados</button>
+    </div>
+  </div>
+
+  <!-- ===== TÍTULO ===== -->
+  <div class="section" id="sec-titulo">
+    <div class="card">
+      <div class="step-badge">Passo 1</div>
+      <div class="field">
+        <label>Nome da sua marca / site / projeto</label>
+        <input type="text" id="t-nome" placeholder="Ex: Conversão Extrema, Hotmart...">
+      </div>
+      <div class="field">
+        <label>Nicho do seu conteúdo</label>
+        <input type="text" id="t-nicho" placeholder="Ex: gestão de tráfego, advocacia, restaurante...">
+      </div>
+      <button class="btn-continuar" onclick="continuar('titulo')">Continuar →</button>
+    </div>
+    <div class="step2-wrap" id="step2-titulo">
+      <div class="card">
+        <div class="step-badge">Passo 2</div>
+        <div class="field">
+          <label>Palavra-chave / produto / assunto principal</label>
+          <input type="text" id="t-keyword" placeholder="Ex: tráfego pago, chuteira Mercurial...">
+        </div>
+        <div class="field">
+          <label>Maior desejo do seu público <span style="color:#94a3b8;font-weight:400">(use verbo no infinitivo)</span></label>
+          <input type="text" id="t-desejo" placeholder="Ex: aprender inglês, vender pela internet...">
+          <div class="hint">Um dos verbos deve terminar com "r". Ex: dirigir bem ou gerar leads...</div>
+        </div>
+      </div>
+      <button class="btn-gerar" onclick="gerarComValidacao('titulo',['t-keyword','t-desejo'])">✨ Gerar 5 Resultados</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <p>Gerando seus textos persuasivos...</p>
+  </div>
+
+  <!-- Results -->
+  <div class="results-wrap" id="results-wrap">
+    <div class="results-title">5 Resultados gerados</div>
+    <div id="results-list"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── TEMPLATES DE COPY ────────────────────────────────────────────────────────
+// Cada template usa {nome}, {nicho}, {subnicho}, {desejo}, {produto}, {keyword}
+// O gerador escolhe 5 aleatórios e preenche com os dados do usuário.
+
+var TEMPLATES = {
+  curso: [
+    {
+      headline: "Chega de tentar sozinho em {subnicho}",
+      sub: "O {nome} te entrega o caminho mais curto para {desejo} — sem enrolação.",
+      copy: "Você já sabe que precisa de {desejo}, mas sem o método certo fica rodando em círculos. O {nome} reúne tudo que funciona em {nicho} num único lugar. Clique e comece hoje."
+    },
+    {
+      headline: "E se você pudesse {desejo} nos próximos 30 dias?",
+      sub: "Alunos do {nome} estão saindo do zero em {subnicho} e chegando a resultados reais.",
+      copy: "Não é promessa, é método. O {nome} foi construído para quem quer {desejo} com consistência em {nicho}. Garanta sua vaga antes que feche."
+    },
+    {
+      headline: "{desejo}: o que ninguém te contou sobre {subnicho}",
+      sub: "Dentro do {nome} você aprende os atalhos que os experts de {nicho} usam todo dia.",
+      copy: "A maioria das pessoas trava em {subnicho} por falta de direção. O {nome} muda esse jogo com um passo a passo validado em {nicho}. Acesse agora e veja a diferença."
+    },
+    {
+      headline: "O método de {subnicho} que está mudando {nicho}",
+      sub: "Aprenda a {desejo} com o {nome} — do jeito que realmente funciona.",
+      copy: "Esqueça o conteúdo genérico de {nicho}. O {nome} vai direto ao ponto: como {desejo} de forma previsível e escalável. Comece agora."
+    },
+    {
+      headline: "Sua virada em {nicho} começa aqui",
+      sub: "{nome}: o único programa de {subnicho} que te leva do caos à clareza.",
+      copy: "Milhares já usaram o {nome} para {desejo} e transformar sua vida em {nicho}. A próxima história de sucesso pode ser a sua. Clique e descubra como."
+    },
+    {
+      headline: "Para quem quer {desejo} e já tentou de tudo",
+      sub: "O {nome} resolve o que outros cursos de {nicho} ignoram: {subnicho} na prática.",
+      copy: "Se você já tentou {desejo} e não conseguiu, o problema não é você — é o método. O {nome} muda isso com uma abordagem diferente de tudo que existe em {nicho}. Experimente."
+    },
+    {
+      headline: "Domine {subnicho} de uma vez por todas",
+      sub: "Com o {nome} você aprende a {desejo} mesmo começando do zero em {nicho}.",
+      copy: "Não importa onde você está agora em {nicho}. O {nome} foi criado para te levar de onde está até {desejo}, com suporte e comunidade. Inscreva-se agora."
+    }
+  ],
+
+  servico: [
+    {
+      headline: "{nome}: resultados reais em {nicho}",
+      sub: "Pare de perder tempo e dinheiro. Deixa quem entende de {nicho} trabalhar por você.",
+      copy: "A {nome} já ajudou dezenas de empresas a crescerem com {nicho}. Chegou a sua vez. Fale com a gente hoje e receba uma análise gratuita do seu negócio."
+    },
+    {
+      headline: "Seu negócio merece mais do que amadores em {nicho}",
+      sub: "A {nome} entrega estratégia e execução — sem desculpas, sem enrolação.",
+      copy: "Em {nicho}, cada detalhe importa. A {nome} cuida de tudo para que você foque no que realmente importa: crescer. Entre em contato agora."
+    },
+    {
+      headline: "Por que empresas líderes escolhem a {nome}?",
+      sub: "Porque em {nicho}, resultados falam mais alto que promessas.",
+      copy: "A {nome} transforma a maneira como negócios usam {nicho} para crescer. Método comprovado, time especializado e foco total nos seus resultados. Fale conosco."
+    },
+    {
+      headline: "Cansado de investir em {nicho} sem retorno?",
+      sub: "A {nome} muda esse jogo com estratégias de {nicho} que realmente convertem.",
+      copy: "Muita agência promete, poucas entregam. A {nome} se comprometeu a ser diferente — resultados mensuráveis em {nicho} desde o primeiro mês. Agende uma conversa."
+    },
+    {
+      headline: "{nicho} que gera resultado. Isso é a {nome}.",
+      sub: "Estratégia inteligente, execução impecável, crescimento real para o seu negócio.",
+      copy: "Não vendemos {nicho}. Entregamos crescimento. A {nome} trabalha com foco total no que importa: resultados que você pode ver e medir. Vamos conversar?"
+    },
+    {
+      headline: "A {nome} faz o seu {nicho} trabalhar de verdade",
+      sub: "Chega de achismo — é hora de ter um parceiro especialista ao seu lado.",
+      copy: "Com a {nome}, seu negócio ganha um time completo de {nicho} sem precisar montar equipe interna. Mais agilidade, menos custo, mais resultado. Fale agora."
+    },
+    {
+      headline: "Especialistas em {nicho} que pensam como sócios",
+      sub: "A {nome} não quer apenas prestar serviço — quer ver seu negócio crescer.",
+      copy: "O que diferencia a {nome} em {nicho} é simples: a gente só cresce quando você cresce. Por isso trabalhamos de verdade pelo seu resultado. Vamos começar?"
+    }
+  ],
+
+  produto: [
+    {
+      headline: "{produto}: a escolha de quem quer {desejo}",
+      sub: "Da {nome}, o produto de {nicho} que está mudando a vida de quem quer {desejo}.",
+      copy: "Esqueça soluções genéricas de {nicho}. O {produto} foi desenvolvido para entregar {desejo} de verdade. Peça o seu agora e sinta a diferença."
+    },
+    {
+      headline: "Você já tentou {desejo} sem resultado?",
+      sub: "O {produto} da {nome} resolve isso — com a tecnologia certa para quem leva {nicho} a sério.",
+      copy: "Quando você escolhe o {produto}, está escolhendo qualidade em {nicho} que realmente funciona. Centenas de clientes já conquistaram {desejo} com ele. Você é o próximo."
+    },
+    {
+      headline: "O {produto} que todo fã de {nicho} precisa ter",
+      sub: "Da {nome}: qualidade, estilo e a certeza de que você vai {desejo}.",
+      copy: "Não é só um produto de {nicho}. O {produto} é a ferramenta que faltava para você finalmente {desejo}. Compre agora com frete rápido."
+    },
+    {
+      headline: "{desejo} com o {produto} da {nome}",
+      sub: "O melhor de {nicho} em um produto feito para quem não aceita menos que o melhor.",
+      copy: "O {produto} foi testado, aprovado e amado por quem entende de {nicho}. Se você quer {desejo}, não existe escolha melhor. Garanta o seu antes que acabe."
+    },
+    {
+      headline: "Por que o {produto} é o mais vendido em {nicho}?",
+      sub: "Porque funciona. E quem quer {desejo} não quer arriscar com imitações.",
+      copy: "A {nome} criou o {produto} pensando em quem leva {nicho} a sério. O resultado? Um produto que entrega {desejo} de verdade. Adicione ao carrinho agora."
+    },
+    {
+      headline: "Descubra o {produto} que está dominando {nicho}",
+      sub: "Qualidade {nome}: para quem quer {desejo} sem abrir mão do que é bom.",
+      copy: "Em {nicho}, o {produto} se destacou por uma razão simples: ele entrega o que promete. Junte-se a quem já conquistou {desejo}. Compre agora."
+    },
+    {
+      headline: "Menos desculpas, mais {desejo} — com o {produto}",
+      sub: "A {nome} trouxe para {nicho} o produto que vai mudar a sua rotina.",
+      copy: "Imagine acordar amanhã sabendo que tem o {produto} ao seu lado para te ajudar a {desejo}. Esse dia pode ser hoje. Peça agora com entrega rápida."
+    }
+  ],
+
+  sensivel: [
+    {
+      headline: "Conheça o trabalho da {nome} em {subnicho}",
+      sub: "Profissionalismo, ética e resultados reais para quem busca {desejo} com segurança.",
+      copy: "A {nome} atua em {nicho} com foco total no bem-estar e na satisfação de cada cliente. Se você busca {desejo} com responsabilidade, estamos aqui para ajudar. Agende sua consulta."
+    },
+    {
+      headline: "Sua jornada para {desejo} começa na {nome}",
+      sub: "Especialistas em {subnicho} que cuidam de você com atenção, técnica e respeito.",
+      copy: "Em {nicho}, escolher o profissional certo faz toda a diferença. A {nome} une experiência em {subnicho} com atendimento humanizado. Fale conosco e dê o primeiro passo."
+    },
+    {
+      headline: "{nicho} de qualidade: conheça a {nome}",
+      sub: "Referência em {subnicho}, a {nome} está pronta para te ajudar a {desejo}.",
+      copy: "Cada pessoa é única, e a {nome} sabe disso. Nosso atendimento em {subnicho} é personalizado para que você possa {desejo} com segurança e confiança. Agende agora."
+    },
+    {
+      headline: "A {nome}: referência em {subnicho} para quem busca {desejo}",
+      sub: "Atendimento especializado, ambiente seguro e resultados que respeitam você.",
+      copy: "Não se contente com menos quando o assunto é {nicho}. A {nome} tem a expertise em {subnicho} e o cuidado que você merece para {desejo}. Entre em contato hoje."
+    },
+    {
+      headline: "Em {nicho}, o nome em que você pode confiar é {nome}",
+      sub: "Especialistas em {subnicho} comprometidos com seu bem-estar e seus resultados.",
+      copy: "A {nome} sabe o quanto é importante encontrar um profissional de {nicho} que você realmente confie. Por isso, cuidamos de cada detalhe para que você {desejo} com tranquilidade. Agende."
+    },
+    {
+      headline: "Dê o próximo passo para {desejo} com a {nome}",
+      sub: "Uma equipe de {subnicho} dedicada exclusivamente aos seus resultados em {nicho}.",
+      copy: "Se você está em busca de {desejo} e quer fazer isso com segurança e responsabilidade, a {nome} é o lugar certo. Fale com nossos especialistas em {subnicho} agora."
+    },
+    {
+      headline: "Resultados reais em {subnicho} — sem exageros",
+      sub: "A {nome} trabalha com {nicho} de forma ética, técnica e focada em você.",
+      copy: "Chega de incertezas sobre {subnicho}. A {nome} oferece clareza, cuidado e um plano personalizado para que você possa {desejo} com segurança. Agende sua avaliação."
+    }
+  ],
+
+  titulo: [
+    {
+      headline: "{keyword}: o guia completo para {desejo}",
+      sub: "Tudo que você precisa saber sobre {keyword} em {nicho} — do básico ao avançado.",
+      copy: "Este conteúdo do {nome} vai te mostrar como usar {keyword} para finalmente {desejo}. Leitura obrigatória para quem leva {nicho} a sério. Leia até o final."
+    },
+    {
+      headline: "Por que você ainda não consegue {desejo} em {nicho}?",
+      sub: "O segredo está em {keyword} — e o {nome} explica tudo neste artigo.",
+      copy: "A maioria das pessoas em {nicho} ignora {keyword} e depois se pergunta por que não consegue {desejo}. Neste conteúdo do {nome}, você vai entender o porquê e como mudar. Confira."
+    },
+    {
+      headline: "{keyword}: o que os experts de {nicho} não contam",
+      sub: "O {nome} revela as estratégias de {keyword} que realmente funcionam para {desejo}.",
+      copy: "Você já leu muita coisa sobre {nicho}, mas esse conteúdo do {nome} é diferente. Vamos fundo em {keyword} para te mostrar como {desejo} de verdade. Não perca."
+    },
+    {
+      headline: "Como usar {keyword} para {desejo} em {nicho}",
+      sub: "Um passo a passo prático do {nome} para dominar {keyword} e transformar seus resultados.",
+      copy: "Se você quer {desejo} em {nicho}, precisa entender {keyword} melhor do que a concorrência. O {nome} preparou esse guia completo para isso. Leia e aplique agora."
+    },
+    {
+      headline: "O erro de {keyword} que está te impedindo de {desejo}",
+      sub: "O {nome} identificou o principal equívoco de {nicho} — e como corrigi-lo agora.",
+      copy: "Em {nicho}, um erro simples de {keyword} pode custar caro. O {nome} vai te mostrar exatamente o que evitar e como {desejo} de forma consistente. Leia antes de continuar errando."
+    },
+    {
+      headline: "{desejo}: a estratégia de {keyword} que funciona em {nicho}",
+      sub: "Descubra o método do {nome} para usar {keyword} a seu favor e sair na frente.",
+      copy: "Em {nicho}, quem domina {keyword} sai na frente. O {nome} preparou um conteúdo exclusivo mostrando como {desejo} com essa estratégia. Acesse agora."
+    },
+    {
+      headline: "Tudo sobre {keyword} em {nicho}: o guia do {nome}",
+      sub: "Do básico ao avançado: aprenda a dominar {keyword} para {desejo} de forma consistente.",
+      copy: "O {nome} reuniu neste guia tudo que você precisa sobre {keyword} para {desejo} em {nicho}. Conteúdo direto ao ponto, sem enrolação. Leia e salve para consultar sempre."
+    }
+  ]
+};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function fill(tpl, vars) {
+  return tpl.replace(/\{(\w+)\}/g, function(_, k){ return vars[k] || ''; });
+}
+
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+// ─── LÓGICA PRINCIPAL ─────────────────────────────────────────────────────────
+function selectObj(btn, type) {
+  document.querySelectorAll('.obj-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  ['curso','servico','produto','sensivel','titulo'].forEach(function(id){
+    var el = document.getElementById('sec-' + id);
+    if (el) el.classList.remove('active');
+    var s2 = document.getElementById('step2-' + id);
+    if (s2) s2.style.display = 'none';
+  });
+  document.getElementById('sec-' + type).classList.add('active');
+  document.getElementById('results-wrap').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+}
+
+function getVal(id) {
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function continuar(type) {
+  var fields = {
+    'curso':    ['c-nome','c-nicho'],
+    'produto':  ['p-nome','p-nicho'],
+    'sensivel': ['n-nome','n-nicho'],
+    'titulo':   ['t-nome','t-nicho']
+  };
+  var ok = (fields[type] || []).every(function(id){
+    var el = document.getElementById(id);
+    return el && el.value.trim() !== '';
+  });
+  if (!ok) { alert('Preencha todos os campos antes de continuar.'); return; }
+  var s2 = document.getElementById('step2-' + type);
+  if (s2) { s2.style.display = 'block'; s2.scrollIntoView({behavior:'smooth',block:'start'}); }
+}
+
+function gerarComValidacao(type, ids) {
+  var empty = ids.filter(function(id){ var el=document.getElementById(id); return !el||el.value.trim()===''; });
+  if (empty.length) { alert('Preencha todos os campos antes de gerar.'); document.getElementById(empty[0]).focus(); return; }
+  gerar(type);
+}
+
+function gerar(type) {
+  document.getElementById('results-wrap').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  document.querySelectorAll('.btn-gerar').forEach(function(b){ b.disabled = true; });
+
+  // Simula tempo de "processamento" para dar sensação de geração real
+  var delay = 1200 + Math.random() * 800;
+  setTimeout(function(){ gerarLocal(type); }, delay);
+}
+
+function gerarLocal(type) {
+  var vars = {};
+
+  if (type === 'curso') {
+    vars = { nome: capitalize(getVal('c-nome')), nicho: getVal('c-nicho'), subnicho: getVal('c-subnicho'), desejo: getVal('c-desejo') };
+  } else if (type === 'servico') {
+    vars = { nome: capitalize(getVal('s-nome')), nicho: getVal('s-nicho') };
+  } else if (type === 'produto') {
+    vars = { nome: capitalize(getVal('p-nome')), nicho: getVal('p-nicho'), produto: getVal('p-produto'), desejo: getVal('p-desejo') };
+  } else if (type === 'sensivel') {
+    vars = { nome: capitalize(getVal('n-nome')), nicho: getVal('n-nicho'), subnicho: getVal('n-subnicho'), desejo: getVal('n-desejo') };
+  } else if (type === 'titulo') {
+    vars = { nome: capitalize(getVal('t-nome')), nicho: getVal('t-nicho'), keyword: getVal('t-keyword'), desejo: getVal('t-desejo') };
+  }
+
+  var pool = shuffle(TEMPLATES[type] || []);
+  var chosen = pool.slice(0, 5);
+
+  var results = chosen.map(function(t){
+    return {
+      headline: fill(t.headline, vars),
+      sub:      fill(t.sub, vars),
+      copy:     fill(t.copy, vars)
+    };
+  });
+
+  renderResults(results);
+}
+
+function renderResults(results) {
+  document.getElementById('loading').style.display = 'none';
+  document.querySelectorAll('.btn-gerar').forEach(function(b){ b.disabled = false; });
+
+  var list = document.getElementById('results-list');
+  list.innerHTML = '';
+
+  results.forEach(function(r, i) {
+    var div = document.createElement('div');
+    div.className = 'result-item';
+    div.innerHTML =
+      '<button class="btn-copy" onclick="copyResult(this,' + i + ')">📋 Copiar</button>' +
+      '<div class="result-num">Resultado ' + (i+1) + '</div>' +
+      '<div class="result-headline" id="hl-' + i + '">' + escHtml(r.headline) + '</div>' +
+      '<div class="result-sub" id="sub-' + i + '">' + escHtml(r.sub) + '</div>' +
+      '<div class="result-copy" id="cp-' + i + '">' + escHtml(r.copy) + '</div>';
+    list.appendChild(div);
+  });
+
+  document.getElementById('results-wrap').style.display = 'block';
+  document.getElementById('results-wrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function escHtml(t) {
+  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyResult(btn, i) {
+  var hl  = document.getElementById('hl-'  + i).textContent;
+  var sub = document.getElementById('sub-' + i).textContent;
+  var cp  = document.getElementById('cp-'  + i).textContent;
+  var txt = 'HEADLINE:\n' + hl + '\n\nSUBHEADLINE:\n' + sub + '\n\nCOPY:\n' + cp;
+  var blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'resultado-' + (i+1) + '.txt'; a.click();
+  URL.revokeObjectURL(url);
+  btn.textContent = '✅ Baixado!'; btn.classList.add('copied');
+  setTimeout(function(){ btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+}
+</script>
+</body>
+</html>
